@@ -6,9 +6,14 @@ import '../theme/app_theme.dart';
 import '../widgets/dev_widgets.dart';
 
 class DevLogScreen extends StatefulWidget {
-  const DevLogScreen({required this.controller, super.key});
+  const DevLogScreen({
+    required this.controller,
+    this.embedded = false,
+    super.key,
+  });
 
   final AppController controller;
+  final bool embedded;
 
   @override
   State<DevLogScreen> createState() => _DevLogScreenState();
@@ -38,15 +43,30 @@ class _DevLogScreenState extends State<DevLogScreen> {
         return CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 18),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                widget.embedded ? 14 : 24,
+                20,
+                18,
+              ),
               sliver: SliverList.list(
                 children: [
-                  const PageHeader(
-                    eyebrow: 'DEV LOG',
-                    title: '开发日志',
-                    subtitle: '写下今天推进了什么，以及为什么。',
-                  ),
-                  const SizedBox(height: 26),
+                  if (!widget.embedded) ...[
+                    const PageHeader(
+                      eyebrow: 'DEV LOG',
+                      title: '开发日志',
+                      subtitle: '写下今天推进了什么，以及为什么。',
+                    ),
+                    const SizedBox(height: 26),
+                  ] else ...[
+                    Text(
+                      '写下今天推进了什么，以及为什么。',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(18),

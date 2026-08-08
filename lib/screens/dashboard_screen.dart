@@ -9,11 +9,13 @@ class DashboardScreen extends StatelessWidget {
   const DashboardScreen({
     required this.controller,
     required this.onNavigate,
+    required this.onOpenKnowledge,
     super.key,
   });
 
   final AppController controller;
   final ValueChanged<int> onNavigate;
+  final ValueChanged<int> onOpenKnowledge;
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +41,9 @@ class DashboardScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 26),
-                  _FocusHero(
-                    focusMinutes: controller.focusMinutes,
-                    sessions: controller.completedSessions,
-                    onStart: () => onNavigate(1),
+                  _ProjectHero(
+                    project: controller.primaryProject,
+                    onOpen: () => onNavigate(1),
                   ),
                   const SizedBox(height: 24),
                   LayoutBuilder(
@@ -55,15 +56,15 @@ class DashboardScreen extends StatelessWidget {
                         color: AppTheme.cyan,
                       );
                       final sessionMetric = MetricCard(
-                        icon: Icons.local_fire_department_outlined,
-                        value: '${controller.completedSessions}',
-                        label: '专注回合',
+                        icon: Icons.rocket_launch_outlined,
+                        value: '${controller.activeProjects}',
+                        label: '活跃项目',
                         color: AppTheme.amber,
                       );
                       final timeMetric = MetricCard(
-                        icon: Icons.schedule_rounded,
-                        value: '${controller.totalFocusMinutes}m',
-                        label: '累计深度工作',
+                        icon: Icons.star_outline_rounded,
+                        value: '${controller.favoriteSnippets}',
+                        label: '收藏片段',
                         color: AppTheme.violet,
                       );
 
@@ -95,7 +96,11 @@ class DashboardScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          SizedBox(height: 148, child: timeMetric),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 168,
+                            child: timeMetric,
+                          ),
                         ],
                       );
                     },
@@ -158,7 +163,7 @@ class DashboardScreen extends StatelessWidget {
                           icon: Icons.data_object_rounded,
                           label: '代码片段',
                           color: AppTheme.violet,
-                          onTap: () => onNavigate(2),
+                          onTap: () => onOpenKnowledge(0),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -167,7 +172,7 @@ class DashboardScreen extends StatelessWidget {
                           icon: Icons.edit_note_rounded,
                           label: '写开发日志',
                           color: AppTheme.cyan,
-                          onTap: () => onNavigate(3),
+                          onTap: () => onOpenKnowledge(1),
                         ),
                       ),
                     ],
@@ -182,16 +187,16 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Future<void> _showAddTaskDialog(BuildContext context) async {
-    final textController = TextEditingController();
+    var input = '';
     final title = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('添加今日任务'),
         content: TextField(
-          controller: textController,
           autofocus: true,
           textInputAction: TextInputAction.done,
           decoration: const InputDecoration(hintText: '例如：完成登录模块重构'),
+          onChanged: (value) => input = value,
           onSubmitted: (value) => Navigator.pop(context, value),
         ),
         actions: [
@@ -200,13 +205,12 @@ class DashboardScreen extends StatelessWidget {
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, textController.text),
+            onPressed: () => Navigator.pop(context, input),
             child: const Text('添加'),
           ),
         ],
       ),
     );
-    textController.dispose();
     if (title != null) controller.addTask(title);
   }
 
@@ -225,16 +229,11 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
-class _FocusHero extends StatelessWidget {
-  const _FocusHero({
-    required this.focusMinutes,
-    required this.sessions,
-    required this.onStart,
-  });
+class _ProjectHero extends StatelessWidget {
+  const _ProjectHero({required this.project, required this.onOpen});
 
-  final int focusMinutes;
-  final int sessions;
-  final VoidCallback onStart;
+  final DevProject? project;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -259,9 +258,9 @@ class _FocusHero extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.bolt_rounded,
+              Icons.rocket_launch_rounded,
               color: AppTheme.amber,
-              size: 32,
+              size: 29,
             ),
           ),
           const SizedBox(width: 18),
@@ -269,8 +268,10 @@ class _FocusHero extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'READY FOR DEEP WORK',
+                Text(
+                  project == null
+                      ? 'PROJECT RADAR'
+                      : '${project!.status.label.toUpperCase()} · ${project!.progress}%',
                   style: TextStyle(
                     color: AppTheme.cyan,
                     fontSize: 11,
@@ -280,12 +281,18 @@ class _FocusHero extends StatelessWidget {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  '$focusMinutes 分钟专注',
+                  project?.name ?? '定义你的第一个项目',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  sessions == 0 ? '今天从第一个回合开始' : '今天已完成 $sessions 个回合',
+                  project == null
+                      ? '写下目标和最明确的下一步'
+                      : '下一步：${project!.nextAction}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 13,
@@ -295,8 +302,8 @@ class _FocusHero extends StatelessWidget {
             ),
           ),
           IconButton.filled(
-            tooltip: '开始专注',
-            onPressed: onStart,
+            tooltip: '打开项目雷达',
+            onPressed: onOpen,
             icon: const Icon(Icons.arrow_forward_rounded),
           ),
         ],
