@@ -105,7 +105,7 @@ class ProfileScreen extends StatelessWidget {
                             color: AppTheme.amber,
                           ),
                           title: const Text('DevNest'),
-                          subtitle: const Text('Flutter 私人开发者工作台'),
+                          subtitle: const Text('springda 的 Flutter 私人开发者工作台'),
                           trailing: Text(
                             'v1.0.0',
                             style: TextStyle(
@@ -163,16 +163,24 @@ class _ProfileHero extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 68,
-            height: 68,
+            width: 76,
+            height: 76,
+            padding: const EdgeInsets.all(3),
             decoration: const BoxDecoration(
-              color: Color(0xFF3B3565),
+              gradient: LinearGradient(
+                colors: [AppTheme.violet, AppTheme.cyan],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               shape: BoxShape.circle,
             ),
-            alignment: Alignment.center,
-            child: Text(
-              profile.name.characters.first.toUpperCase(),
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/springda-avatar.jpg',
+                fit: BoxFit.cover,
+                alignment: const Alignment(0.18, -0.08),
+                semanticLabel: 'springda 的头像',
+              ),
             ),
           ),
           const SizedBox(width: 17),

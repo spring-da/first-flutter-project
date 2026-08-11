@@ -32,7 +32,7 @@ class DashboardScreen extends StatelessWidget {
                   const SizedBox(height: 34),
                   PageHeader(
                     eyebrow: _todayLabel(),
-                    title: '${_greeting()}，开发者',
+                    title: '${_greeting()}，${controller.profile.name}',
                     subtitle: '把复杂留给代码，把清晰留给今天。',
                     action: IconButton.filledTonal(
                       tooltip: '新增任务',

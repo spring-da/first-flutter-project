@@ -157,28 +157,98 @@ class DevProject {
   }
 }
 
+enum DevLogCategory {
+  problem,
+  decision,
+  learning,
+  idea;
+
+  String get label => switch (this) {
+    DevLogCategory.problem => '问题解决',
+    DevLogCategory.decision => '技术决策',
+    DevLogCategory.learning => '学习记录',
+    DevLogCategory.idea => '灵感想法',
+  };
+
+  static DevLogCategory fromJson(Object? value) {
+    return DevLogCategory.values.firstWhere(
+      (category) => category.name == value,
+      orElse: () => DevLogCategory.learning,
+    );
+  }
+}
+
 class DevLogEntry {
   const DevLogEntry({
     required this.id,
+    this.title = '',
     required this.content,
+    this.category = DevLogCategory.learning,
+    this.tags = const [],
+    this.isPinned = false,
     required this.createdAt,
+    this.updatedAt,
   });
 
   final String id;
+  final String title;
   final String content;
+  final DevLogCategory category;
+  final List<String> tags;
+  final bool isPinned;
   final DateTime createdAt;
+  final DateTime? updatedAt;
+
+  String get displayTitle {
+    if (title.trim().isNotEmpty) return title.trim();
+    final firstLine = content.trim().split('\n').first.trim();
+    if (firstLine.length <= 24) return firstLine;
+    return '${firstLine.substring(0, 24)}…';
+  }
+
+  DevLogEntry copyWith({
+    String? title,
+    String? content,
+    DevLogCategory? category,
+    List<String>? tags,
+    bool? isPinned,
+    DateTime? updatedAt,
+  }) {
+    return DevLogEntry(
+      id: id,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      category: category ?? this.category,
+      tags: tags ?? this.tags,
+      isPinned: isPinned ?? this.isPinned,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 
   Map<String, Object?> toJson() => {
     'id': id,
+    'title': title,
     'content': content,
+    'category': category.name,
+    'tags': tags,
+    'isPinned': isPinned,
     'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt?.toIso8601String(),
   };
 
   factory DevLogEntry.fromJson(Map<String, Object?> json) {
+    final createdAt = DateTime.tryParse(json['createdAt'] as String? ?? '');
+    final updatedAt = DateTime.tryParse(json['updatedAt'] as String? ?? '');
     return DevLogEntry(
       id: json['id'] as String,
-      content: json['content'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      title: json['title'] as String? ?? '',
+      content: json['content'] as String? ?? '',
+      category: DevLogCategory.fromJson(json['category']),
+      tags: (json['tags'] as List? ?? const []).whereType<String>().toList(),
+      isPinned: json['isPinned'] as bool? ?? false,
+      createdAt: createdAt ?? DateTime.now(),
+      updatedAt: updatedAt,
     );
   }
 }
@@ -191,9 +261,9 @@ class DeveloperProfile {
   });
 
   static const initial = DeveloperProfile(
-    name: '开发者',
-    role: 'Independent Builder',
-    bio: '持续构建，持续学习。',
+    name: 'springda',
+    role: 'Independent Developer',
+    bio: '用代码记录成长，把想法构建成作品。',
   );
 
   final String name;

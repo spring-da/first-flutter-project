@@ -2,6 +2,9 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// 最底层的键值数据源。
+///
+/// Repository 负责理解业务模型；Storage 只负责读写原始 JSON Map。
 abstract interface class AppStorage {
   Future<Map<String, Object?>?> load();
 
@@ -9,12 +12,12 @@ abstract interface class AppStorage {
 }
 
 class SharedPreferencesStorage implements AppStorage {
-  static const _storageKey = 'devnest_state_v1';
+  static const storageKey = 'devnest_state_v1';
   final SharedPreferencesAsync _preferences = SharedPreferencesAsync();
 
   @override
   Future<Map<String, Object?>?> load() async {
-    final rawValue = await _preferences.getString(_storageKey);
+    final rawValue = await _preferences.getString(storageKey);
     if (rawValue == null) return null;
 
     final decoded = jsonDecode(rawValue);
@@ -24,10 +27,11 @@ class SharedPreferencesStorage implements AppStorage {
 
   @override
   Future<void> save(Map<String, Object?> value) {
-    return _preferences.setString(_storageKey, jsonEncode(value));
+    return _preferences.setString(storageKey, jsonEncode(value));
   }
 }
 
+/// 供单元测试使用的内存数据源，不触碰设备文件。
 class MemoryStorage implements AppStorage {
   Map<String, Object?>? value;
 

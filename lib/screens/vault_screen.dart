@@ -216,9 +216,11 @@ class _VaultScreenState extends State<VaultScreen> {
   }
 
   Future<void> _showAddSnippetDialog(BuildContext context) async {
-    final draft = await showDialog<_SnippetDraft>(
-      context: context,
-      builder: (_) => const _SnippetEditorDialog(),
+    final draft = await Navigator.of(context).push<_SnippetDraft>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const _SnippetEditorPage(),
+      ),
     );
     if (draft == null) return;
 
@@ -233,9 +235,11 @@ class _VaultScreenState extends State<VaultScreen> {
     BuildContext context,
     CodeSnippet snippet,
   ) async {
-    final draft = await showDialog<_SnippetDraft>(
-      context: context,
-      builder: (_) => _SnippetEditorDialog(initialSnippet: snippet),
+    final draft = await Navigator.of(context).push<_SnippetDraft>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _SnippetEditorPage(initialSnippet: snippet),
+      ),
     );
     if (draft == null) return;
 
@@ -595,16 +599,16 @@ class _SnippetDraft {
   final String code;
 }
 
-class _SnippetEditorDialog extends StatefulWidget {
-  const _SnippetEditorDialog({this.initialSnippet});
+class _SnippetEditorPage extends StatefulWidget {
+  const _SnippetEditorPage({this.initialSnippet});
 
   final CodeSnippet? initialSnippet;
 
   @override
-  State<_SnippetEditorDialog> createState() => _SnippetEditorDialogState();
+  State<_SnippetEditorPage> createState() => _SnippetEditorPageState();
 }
 
-class _SnippetEditorDialogState extends State<_SnippetEditorDialog> {
+class _SnippetEditorPageState extends State<_SnippetEditorPage> {
   final _formKey = GlobalKey<FormState>();
   late String _title;
   late String _language;
@@ -634,63 +638,114 @@ class _SnippetEditorDialogState extends State<_SnippetEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(_isEditing ? '编辑代码片段' : '新增代码片段'),
-      content: SizedBox(
-        width: 520,
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          tooltip: '取消',
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.close_rounded),
+        ),
+        title: Text(_isEditing ? '编辑代码片段' : '新增代码片段'),
+      ),
+      body: SafeArea(
         child: Form(
           key: _formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  initialValue: _title,
-                  autofocus: true,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(labelText: '标题'),
-                  onChanged: (value) => _title = value,
-                  validator: (value) =>
-                      value == null || value.trim().isEmpty ? '请输入片段标题' : null,
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  initialValue: _language,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: '语言',
-                    hintText: 'Dart / TypeScript / Shell',
+          child: ListView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+            children: [
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        _isEditing ? '调整片段内容并保存修改。' : '把值得复用的代码收进你的知识库。',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                      TextFormField(
+                        initialValue: _title,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: '标题',
+                          hintText: '例如：Dart 并发请求',
+                        ),
+                        onChanged: (value) => _title = value,
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                            ? '请输入片段标题'
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: _language,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(
+                          labelText: '语言',
+                          hintText: 'Dart / TypeScript / Shell',
+                        ),
+                        onChanged: (value) => _language = value,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: _code,
+                        minLines: 12,
+                        maxLines: 24,
+                        keyboardType: TextInputType.multiline,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 13,
+                          height: 1.55,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: '代码',
+                          hintText: '粘贴或输入代码…',
+                          alignLabelWithHint: true,
+                        ),
+                        onChanged: (value) => _code = value,
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                            ? '请输入代码内容'
+                            : null,
+                      ),
+                    ],
                   ),
-                  onChanged: (value) => _language = value,
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  initialValue: _code,
-                  minLines: 6,
-                  maxLines: 12,
-                  keyboardType: TextInputType.multiline,
-                  style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-                  decoration: const InputDecoration(
-                    labelText: '代码',
-                    alignLabelWithHint: true,
-                  ),
-                  onChanged: (value) => _code = value,
-                  validator: (value) =>
-                      value == null || value.trim().isEmpty ? '请输入代码内容' : null,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('取消'),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('取消'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _submit,
+                  icon: Icon(
+                    _isEditing ? Icons.save_outlined : Icons.add_rounded,
+                  ),
+                  label: Text(_isEditing ? '更新片段' : '保存片段'),
+                ),
+              ),
+            ],
+          ),
         ),
-        FilledButton(onPressed: _submit, child: Text(_isEditing ? '更新' : '保存')),
-      ],
+      ),
     );
   }
 }

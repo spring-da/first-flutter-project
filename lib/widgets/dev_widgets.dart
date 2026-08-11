@@ -209,9 +209,24 @@ class DevNestMark extends StatelessWidget {
         ),
         if (showName) ...[
           const SizedBox(width: 11),
-          const Text(
-            'DevNest',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'DevNest',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+              Text(
+                'SPRINGDA EDITION',
+                style: TextStyle(
+                  color: AppTheme.cyan,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ],
           ),
         ],
       ],

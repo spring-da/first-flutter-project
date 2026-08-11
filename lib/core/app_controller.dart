@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../data/repositories/app_repository.dart';
 import '../models/dev_models.dart';
-import 'storage_service.dart';
 
 class AppController extends ChangeNotifier {
-  AppController(this._storage);
+  AppController(this._repository);
 
-  final AppStorage _storage;
+  final AppRepository _repository;
 
   List<DevTask> _tasks = const [];
   List<CodeSnippet> _snippets = const [];
@@ -45,102 +45,21 @@ class AppController extends ChangeNotifier {
 
   Future<void> load() async {
     try {
-      final value = await _storage.load();
-      if (value == null) {
-        _seedDemoData();
-        await _persist();
-        return;
-      }
-
-      _tasks = _decodeList(value['tasks'], DevTask.fromJson);
-      _snippets = _decodeList(value['snippets'], CodeSnippet.fromJson);
-      _projects = _decodeList(value['projects'], DevProject.fromJson);
-      _logs = _decodeList(value['logs'], DevLogEntry.fromJson);
-      var needsMigration = false;
-      if (!value.containsKey('projects')) {
-        _projects = _defaultProjects();
-        needsMigration = true;
-      }
-      final profileValue = value['profile'];
-      if (profileValue is Map) {
-        _profile = DeveloperProfile.fromJson(
-          Map<String, Object?>.from(profileValue),
-        );
-      } else {
-        _profile = DeveloperProfile.initial;
-        needsMigration = true;
-      }
-      if (needsMigration) await _persist();
+      final storedData = await _repository.load();
+      final data = storedData ?? DevNestData.seeded();
+      _apply(data);
+      if (storedData == null) await _persist();
     } catch (_) {
-      _seedDemoData();
+      _apply(DevNestData.seeded());
     }
   }
 
-  List<T> _decodeList<T>(
-    Object? value,
-    T Function(Map<String, Object?> json) fromJson,
-  ) {
-    if (value is! List) return [];
-    return value
-        .whereType<Map>()
-        .map((item) => fromJson(Map<String, Object?>.from(item)))
-        .toList();
-  }
-
-  void _seedDemoData() {
-    _tasks = const [
-      DevTask(id: 'task-1', title: '梳理本周最重要的技术目标'),
-      DevTask(id: 'task-2', title: '推进当前项目的下一步行动'),
-      DevTask(id: 'task-3', title: '记录今天解决的关键问题'),
-    ];
-    _snippets = const [
-      CodeSnippet(
-        id: 'snippet-1',
-        title: 'Dart 并发请求',
-        language: 'Dart',
-        code:
-            'final results = await Future.wait([\n  fetchUser(),\n  fetchProjects(),\n]);',
-        isFavorite: true,
-      ),
-      CodeSnippet(
-        id: 'snippet-2',
-        title: 'Git 整理最近提交',
-        language: 'Shell',
-        code: 'git log --oneline --graph --decorate -12',
-      ),
-      CodeSnippet(
-        id: 'snippet-3',
-        title: 'Docker 清理构建缓存',
-        language: 'Shell',
-        code: 'docker builder prune --filter until=24h',
-      ),
-    ];
-    _projects = _defaultProjects();
-    _logs = [];
-    _profile = DeveloperProfile.initial;
-  }
-
-  List<DevProject> _defaultProjects() {
-    return const [
-      DevProject(
-        id: 'project-1',
-        name: 'DevNest',
-        description: '为程序员打造的私人工作台，集中管理项目、任务、代码片段与开发日志。',
-        techStack: ['Flutter', 'Dart', 'Material 3'],
-        status: ProjectStatus.building,
-        progress: 68,
-        nextAction: '完善项目雷达，并增加数据导出能力',
-      ),
-      DevProject(
-        id: 'project-2',
-        name: 'Next Side Project',
-        description: '保存下一个值得验证的产品想法，先定义问题，再决定技术方案。',
-        techStack: ['Idea'],
-        status: ProjectStatus.planning,
-        progress: 15,
-        nextAction: '写出一句话价值主张和最小用户路径',
-      ),
-    ];
+  void _apply(DevNestData data) {
+    _tasks = data.tasks;
+    _snippets = data.snippets;
+    _projects = data.projects;
+    _logs = data.logs;
+    _profile = data.profile;
   }
 
   void addTask(String title) {
@@ -277,18 +196,78 @@ class AppController extends ChangeNotifier {
     _commit();
   }
 
-  void addLog(String content) {
+  void addLog(
+    String content, {
+    String title = '',
+    DevLogCategory category = DevLogCategory.learning,
+    List<String> tags = const [],
+  }) {
     final normalized = content.trim();
     if (normalized.isEmpty) return;
     _logs = [
       DevLogEntry(
         id: _newId('log'),
+        title: title.trim(),
         content: normalized,
+        category: category,
+        tags: _normalizeTags(tags),
         createdAt: DateTime.now(),
       ),
       ..._logs,
     ];
     _commit();
+  }
+
+  void updateLog({
+    required String id,
+    required String title,
+    required String content,
+    required DevLogCategory category,
+    required List<String> tags,
+  }) {
+    final normalizedContent = content.trim();
+    if (normalizedContent.isEmpty) return;
+    _logs = [
+      for (final entry in _logs)
+        if (entry.id == id)
+          entry.copyWith(
+            title: title.trim(),
+            content: normalizedContent,
+            category: category,
+            tags: _normalizeTags(tags),
+            updatedAt: DateTime.now(),
+          )
+        else
+          entry,
+    ];
+    _commit();
+  }
+
+  void toggleLogPinned(String id) {
+    _logs = [
+      for (final entry in _logs)
+        if (entry.id == id)
+          entry.copyWith(isPinned: !entry.isPinned)
+        else
+          entry,
+    ];
+    _commit();
+  }
+
+  void deleteLog(String id) {
+    _logs = _logs.where((entry) => entry.id != id).toList();
+    _commit();
+  }
+
+  List<String> _normalizeTags(List<String> tags) {
+    final normalized = <String>[];
+    for (final tag in tags) {
+      final value = tag.trim().replaceFirst(RegExp(r'^#+'), '');
+      if (value.isNotEmpty && !normalized.contains(value)) {
+        normalized.add(value);
+      }
+    }
+    return normalized;
   }
 
   void updateProfile({
@@ -312,13 +291,15 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> _persist() {
-    return _storage.save({
-      'tasks': _tasks.map((task) => task.toJson()).toList(),
-      'snippets': _snippets.map((snippet) => snippet.toJson()).toList(),
-      'projects': _projects.map((project) => project.toJson()).toList(),
-      'logs': _logs.map((entry) => entry.toJson()).toList(),
-      'profile': _profile.toJson(),
-    });
+    return _repository.save(
+      DevNestData(
+        tasks: _tasks,
+        snippets: _snippets,
+        projects: _projects,
+        logs: _logs,
+        profile: _profile,
+      ),
+    );
   }
 
   String _newId(String prefix) {
